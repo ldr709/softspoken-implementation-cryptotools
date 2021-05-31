@@ -179,7 +179,7 @@ namespace osuCrypto {
         // state matrix with values in an S-box.
         inline void SubBytes(block& state_)
         {
-            u8* state = (u8*)&state_;
+            u8* state = state_.data();
             for (u64 i = 0; i < 16; ++i)
                 state[i] = getSBoxValue(state[i]);
         }
@@ -728,7 +728,7 @@ namespace osuCrypto {
                 temp[6] = finalEnc(temp[6], mRoundKey[10]);
                 temp[7] = finalEnc(temp[7], mRoundKey[10]);
 
-                memcpy((u8*)(ciphertext + idx), temp, sizeof(temp));
+                memcpy(ciphertext[idx].data(), temp, sizeof(temp));
             }
 
             for (; idx < static_cast<i32>(blockLength); ++idx)
@@ -746,7 +746,7 @@ namespace osuCrypto {
                 temp = roundEnc(temp, mRoundKey[9]);
                 temp = finalEnc(temp, mRoundKey[10]);
 
-                memcpy((u8*)(ciphertext + idx), &temp, sizeof(temp));
+                memcpy(ciphertext[idx].data(), &temp, sizeof(temp));
             }
 
         }
@@ -828,7 +828,7 @@ namespace osuCrypto {
         // state matrix with values in an S-box.
         static void InvSubBytes(block& state_)
         {
-            u8* state = (u8*)&state_;
+            u8* state = state_.data();
             for (auto i = 0; i < 16; ++i)
                 state[i] = getSBoxInvert(state[i]);
         }

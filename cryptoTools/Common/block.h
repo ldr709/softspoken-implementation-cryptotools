@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <array>
 #include <iostream>
+#include <string.h>
 
 #ifdef OC_ENABLE_SSE2
 #include <emmintrin.h>
@@ -26,37 +27,34 @@ namespace osuCrypto
         block() = default;
         block(const block&) = default;
         block(uint64_t x1, uint64_t x0)
-        {
 #ifdef OC_ENABLE_SSE2
+        {
             mData = _mm_set_epi64x(x1, x0);
+        }
 #else
-            as<uint64_t>()[0] = x0;
-            as<uint64_t>()[1] = x1;
+            : block(std::array<std::uint64_t, 2> {x0, x1}) {}
 #endif
-        };
 
         block(char e15, char e14, char e13, char e12, char e11, char e10, char e9, char e8, char e7, char e6, char e5, char e4, char e3, char e2, char e1, char e0)
-        {
 #ifdef OC_ENABLE_SSE2
+        {
             mData = _mm_set_epi8(e15, e14, e13, e12, e11, e10, e9, e8, e7, e6, e5, e4, e3, e2, e1, e0);
+        }
 #else
-            as<char>()[0] = e0;
-            as<char>()[1] = e1;
-            as<char>()[2] = e2;
-            as<char>()[3] = e3;
-            as<char>()[4] = e4;
-            as<char>()[5] = e5;
-            as<char>()[6] = e6;
-            as<char>()[7] = e7;
-            as<char>()[8] = e8;
-            as<char>()[9] = e9;
-            as<char>()[10] = e10;
-            as<char>()[11] = e11;
-            as<char>()[12] = e12;
-            as<char>()[13] = e13;
-            as<char>()[14] = e14;
-            as<char>()[15] = e15;
+            : block(std::array<char, 16> {
+                e0, e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12, e13, e14, e15
+            }) {}
 #endif
+
+        template<typename T,
+            typename Enable = typename std::enable_if<
+                std::is_pod<T>::value &&
+                (sizeof(T) <= 16) &&
+                (16 % sizeof(T) == 0)
+            >::type>
+        block(const std::array<T, 16 / sizeof(T)>& arr)
+        {
+            memcpy(data(), arr.data(), 16);
         }
 
 #ifdef OC_ENABLE_SSE2
@@ -83,16 +81,15 @@ namespace osuCrypto
             return mData;
         }
 #endif
-        template<typename T>
-        typename std::enable_if<
-            std::is_pod<T>::value &&
-            (sizeof(T) <= 16) &&
-            (16 % sizeof(T) == 0)
-            ,
-            std::array<T, 16 / sizeof(T)>&
-        >::type as()
+
+        unsigned char* data()
         {
-            return *(std::array<T, 16 / sizeof(T)>*)this;
+            return (unsigned char*) &mData;
+        }
+
+        const unsigned char* data() const
+        {
+            return (const unsigned char*) &mData;
         }
 
         template<typename T>
@@ -101,16 +98,18 @@ namespace osuCrypto
             (sizeof(T) <= 16) &&
             (16 % sizeof(T) == 0)
             ,
-            const std::array<T, 16 / sizeof(T)>&
+            std::array<T, 16 / sizeof(T)>
         >::type as() const
         {
-            return *(const std::array<T, 16 / sizeof(T)>*)this;
+            std::array<T, 16 / sizeof(T)> output;
+            memcpy(output.data(), data(), 16);
+            return output;
         }
 
         inline bool operator<(const osuCrypto::block& rhs)
         {
-            auto& x = as<std::uint64_t>();
-            auto& y = rhs.as<std::uint64_t>();
+            auto x = as<std::uint64_t>();
+            auto y = rhs.as<std::uint64_t>();
             return x[1] < y[1] || (x[1] == y[1] && x[0] < y[0]);
         }
 
@@ -130,9 +129,10 @@ namespace osuCrypto
 #endif
         inline osuCrypto::block cc_xor_si128(const osuCrypto::block& rhs) const
         {
-            auto ret = *this;
-            ret.as<std::uint64_t>()[0] ^= rhs.as<std::uint64_t>()[0];
-            ret.as<std::uint64_t>()[1] ^= rhs.as<std::uint64_t>()[1];
+            auto ret = as<std::uint64_t>();
+            auto rhsa = rhs.as<std::uint64_t>();
+            ret[0] ^= rhsa[0];
+            ret[1] ^= rhsa[1];
             return ret;
         }
 
@@ -154,9 +154,10 @@ namespace osuCrypto
 #endif
         inline osuCrypto::block cc_and_si128(const osuCrypto::block& rhs)const
         {
-            auto ret = *this;
-            ret.as<std::uint64_t>()[0] &= rhs.as<std::uint64_t>()[0];
-            ret.as<std::uint64_t>()[1] &= rhs.as<std::uint64_t>()[1];
+            auto ret = as<std::uint64_t>();
+            auto rhsa = rhs.as<std::uint64_t>();
+            ret[0] &= rhsa[0];
+            ret[1] &= rhsa[1];
             return ret;
         }
 
@@ -177,9 +178,10 @@ namespace osuCrypto
 #endif
         inline osuCrypto::block cc_or_si128(const osuCrypto::block& rhs)const
         {
-            auto ret = *this;
-            ret.as<std::uint64_t>()[0] |= rhs.as<std::uint64_t>()[0];
-            ret.as<std::uint64_t>()[1] |= rhs.as<std::uint64_t>()[1];
+            auto ret = as<std::uint64_t>();
+            auto rhsa = rhs.as<std::uint64_t>();
+            ret[0] |= rhsa[0];
+            ret[1] |= rhsa[1];
             return ret;
         }
 
@@ -190,7 +192,7 @@ namespace osuCrypto
             return mm_slli_epi64(rhs);
 #else
             return cc_slli_epi64(rhs);
-#endif 
+#endif
         }
 
 #ifdef OC_ENABLE_SSE2
@@ -201,9 +203,9 @@ namespace osuCrypto
 #endif
         inline osuCrypto::block cc_slli_epi64(const std::uint8_t& rhs)const
         {
-            auto ret = *this;
-            ret.as<std::uint64_t>()[0] <<= rhs;
-            ret.as<std::uint64_t>()[1] <<= rhs;
+            auto ret = as<std::uint64_t>();
+            ret[0] <<= rhs;
+            ret[1] <<= rhs;
             return ret;
         }
 
@@ -224,9 +226,9 @@ namespace osuCrypto
 #endif
         inline block cc_srli_epi64(const std::uint8_t& rhs) const
         {
-            auto ret = *this;
-            ret.as<std::uint64_t>()[0] >>= rhs;
-            ret.as<std::uint64_t>()[1] >>= rhs;
+            auto ret = as<std::uint64_t>();
+            ret[0] >>= rhs;
+            ret[1] >>= rhs;
             return ret;;
         }
 
@@ -249,9 +251,10 @@ namespace osuCrypto
 #endif
         inline block cc_add_epi64(const osuCrypto::block& rhs) const
         {
-            auto ret = *this;
-            ret.as<std::uint64_t>()[0] += rhs.as<std::uint64_t>()[0];
-            ret.as<std::uint64_t>()[1] += rhs.as<std::uint64_t>()[1];
+            auto ret = as<std::uint64_t>();
+            auto rhsa = rhs.as<std::uint64_t>();
+            ret[0] += rhsa[0];
+            ret[1] += rhsa[1];
             return ret;
         }
 
@@ -274,9 +277,10 @@ namespace osuCrypto
 #endif
         inline block cc_sub_epi64(const osuCrypto::block& rhs) const
         {
-            auto ret = *this;
-            ret.as<std::uint64_t>()[0] -= rhs.as<std::uint64_t>()[0];
-            ret.as<std::uint64_t>()[1] -= rhs.as<std::uint64_t>()[1];
+            auto ret = as<std::uint64_t>();
+            auto rhsa = rhs.as<std::uint64_t>();
+            ret[0] -= rhsa[0];
+            ret[1] -= rhsa[1];
             return ret;
         }
 
@@ -287,8 +291,7 @@ namespace osuCrypto
             auto neq = _mm_xor_si128(*this, rhs);
             return _mm_test_all_zeros(neq, neq) != 0;
 #else
-            return as<std::uint64_t>()[0] == rhs.as<std::uint64_t>()[0] &&
-                as<std::uint64_t>()[1] == rhs.as<std::uint64_t>()[1];
+            return as<std::uint64_t>() == rhs.as<std::uint64_t>();
 #endif
         }
 
@@ -300,10 +303,9 @@ namespace osuCrypto
 
         inline bool operator<(const osuCrypto::block& rhs)const
         {
-            return
-                as<std::uint64_t>()[1] < rhs.as< std::uint64_t>()[1] ||
-                (as<std::uint64_t>()[1] == rhs.as< std::uint64_t>()[1] &&
-                    as<std::uint64_t>()[0] < rhs.as< std::uint64_t>()[0]);
+            auto lhsa = as<std::uint64_t>();
+            auto rhsa = rhs.as<std::uint64_t>();
+            return lhsa[1] < rhsa[1] || (lhsa[1] == rhsa[1] && lhsa[0] < rhsa[0]);
         }
 
 
@@ -325,9 +327,8 @@ namespace osuCrypto
 #endif
         inline block cc_srai_epi16(char imm8) const
         {
-            block ret;
-            auto& v = as<std::int16_t>();
-            auto& r = ret.as<std::int16_t>();
+            auto v = as<std::int16_t>();
+            std::array<std::int16_t, 8> r;
             if (imm8 <= 15)
             {
                 r[0] = v[0] >> imm8;
@@ -351,7 +352,7 @@ namespace osuCrypto
                 r[6] = v[6] ? 0xFFFF : 0;
                 r[7] = v[7] ? 0xFFFF : 0;
             }
-            return ret;
+            return r;
 
         }
 
@@ -375,7 +376,7 @@ namespace osuCrypto
         inline int cc_movemask_epi8() const
         {
             int ret{ 0 };
-            auto& v = as<unsigned char>();
+            auto v = as<unsigned char>();
             int j = 0;
             for (int i = 7; i >= 0; --i)
                 ret |= std::uint16_t(v[j++] & 128) >> i;
@@ -395,10 +396,12 @@ namespace osuCrypto
 #endif
         }
 
-        inline int cc_testc_si128(const block& b) const
+        inline int cc_testc_si128(const block& rhs) const
         {
-            auto v0 = ~as<uint64_t>()[0] & b.as<uint64_t>()[0];
-            auto v1 = ~as<uint64_t>()[1] & b.as<uint64_t>()[1];
+            auto lhsa = as<std::uint64_t>();
+            auto rhsa = rhs.as<std::uint64_t>();
+            auto v0 = ~lhsa[0] & rhsa[0];
+            auto v1 = ~lhsa[1] & rhsa[1];
             return (v0 || v1) ? 0 : 1;
         }
 
@@ -477,8 +480,8 @@ namespace osuCrypto
         {
             static const constexpr std::uint64_t mod = 0b10000111;
             auto shifted = as<uint64_t>();
-            auto& result0 = xy1.as<uint64_t>();
-            auto& result1 = xy2.as<uint64_t>();
+            auto ya = y.as<uint64_t>();
+            std::array<uint64_t, 2> result0, result1;
 
             result0[0] = 0;
             result0[1] = 0;
@@ -487,7 +490,7 @@ namespace osuCrypto
 
             for (int64_t i = 0; i < 2; ++i) {
                 for (int64_t j = 0; j < 64; ++j) {
-                    if (y.as<int64_t>()[i] & (1ull << j)) {
+                    if (ya[i] & (1ull << j)) {
                         result0[0] ^= shifted[0];
                         result0[1] ^= shifted[1];
                     }
@@ -502,6 +505,9 @@ namespace osuCrypto
                     }
                 }
             }
+
+            xy1 = result0;
+            xy2 = result1;
         }
 
 
@@ -512,7 +518,7 @@ namespace osuCrypto
 #else
             return cc_gf128Reduce(x1);
 #endif
-    }
+        }
 
 
         block cc_gf128Reduce(const block& x1) const;
@@ -540,7 +546,7 @@ namespace osuCrypto
             return mul256_low;
         }
 #endif
-};
+    };
 
     static_assert(sizeof(block) == 16, "expected block size");
     static_assert(std::alignment_of<block>::value == 16, "expected block alignment");
@@ -551,10 +557,7 @@ namespace osuCrypto
 
     inline block toBlock(std::uint64_t high_u64, std::uint64_t low_u64)
     {
-        block ret;
-        ret.as<std::uint64_t>()[0] = low_u64;
-        ret.as<std::uint64_t>()[1] = high_u64;
-        return ret;
+        return block(high_u64, low_u64);
     }
     inline block toBlock(std::uint64_t low_u64) { return toBlock(0, low_u64); }
     inline block toBlock(const std::uint8_t* data) { return toBlock(((std::uint64_t*)data)[1], ((std::uint64_t*)data)[0]); }
