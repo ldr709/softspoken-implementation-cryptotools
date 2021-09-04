@@ -1684,6 +1684,7 @@ namespace tests_cryptoTools
                     auto i = mIdx ^ 1;
                     while (sizeLeft)
                     {
+                        std::lock_guard<std::mutex> lock(mBase.mMtx);
                         if (mCanceled)
                             return;
 
@@ -1701,8 +1702,8 @@ namespace tests_cryptoTools
                             //lout << "buff[" << i << "] wrote " << writeSize << ", rem " << sizeLeft << std::endl;
                             mBase.mWriteIdx[i] += writeSize;
                         }
-                        else
-                            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                        //else
+                            //std::this_thread::sleep_for(std::chrono::milliseconds(1));
                     }
                 }
                 void recv(u8* data, u64 sizeLeft)
@@ -1711,6 +1712,7 @@ namespace tests_cryptoTools
 
                     while (sizeLeft)
                     {
+                        std::lock_guard<std::mutex> lock(mBase.mMtx);
                         if (mCanceled)
                             return;
 
@@ -1728,8 +1730,8 @@ namespace tests_cryptoTools
                             //lout << "buff[" << i << "] read " << readSize<< ", rem " << sizeLeft << std::endl;
                             mBase.mReadIdx[i] += readSize;
                         }
-                        else
-                            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                        //else
+                            //std::this_thread::sleep_for(std::chrono::milliseconds(1));
                     }
                 }
 
@@ -1757,11 +1759,12 @@ namespace tests_cryptoTools
                 return std::array<Socket, 2>{ {Socket(*this, 0), Socket(*this, 1)}};
             }
             std::array<std::vector<u8>, 2> mBuffer;
-            std::array<std::atomic<u64>, 2> mWriteIdx, mReadIdx;
+            std::array<u64, 2> mWriteIdx, mReadIdx;
+            std::mutex mMtx;
 
         };
 
-        IOService ios;
+        IOService ios(3);
         SmallBuff b;
         auto sock = b.makeSockets();
 
@@ -1772,7 +1775,7 @@ namespace tests_cryptoTools
         Channel chl1(ios, ad1);
 
 
-        std::vector<u8> data(1024);
+        std::vector<u8> data(64);
         chl0.asyncSend(data);
         chl1.asyncSend(data);
         chl0.recv(data);

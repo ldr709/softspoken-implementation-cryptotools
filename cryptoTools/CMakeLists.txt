@@ -7,10 +7,14 @@ get_directory_property(hasParent PARENT_DIRECTORY)
 # add the source files
 file(GLOB_RECURSE SRCS *.cpp *.c)
 add_library(cryptoTools STATIC ${SRCS})
-# make projects that include cryptoTools use this as an include folder
-target_include_directories(cryptoTools PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/..")
-target_include_directories(cryptoTools PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/..")
 
+# make projects that include cryptoTools use this as an include folder
+target_include_directories(cryptoTools PUBLIC 
+                    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/..>
+                    $<INSTALL_INTERFACE:include>) 
+target_include_directories(cryptoTools PUBLIC 
+                    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
+                    $<INSTALL_INTERFACE:include>) 
 
 if(NOT MSVC)
     target_compile_options(cryptoTools PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-std=c++14> -pthread)
@@ -21,57 +25,42 @@ if(NOT MSVC)
     endif()
 endif()
 
-#############################################
-#            Install                        #
-#############################################
 
-install(DIRECTORY . DESTINATION include/cryptoTools FILES_MATCHING PATTERN "*.h")
-install(DIRECTORY gsl DESTINATION include/cryptoTools)
-install(TARGETS cryptoTools DESTINATION lib)
-
-
-###########################################################################
-#                        Link external libraries                          #
-#                        -----------------------                          #
-#                                                                         #
-#  Define the expected location for miracl and boost.                     #
-#  Boost will be found using the findBoost  module in CMake               #
-#  It should look in the location specified and then look elsewhere       #
-#                                                                         #
-###########################################################################
-
-
-include("${CMAKE_CURRENT_SOURCE_DIR}/../cmake/cryptoToolsDepHelper.cmake")
 
 ## Relic
 ###########################################################################
 
 if (ENABLE_RELIC)
-  target_include_directories(cryptoTools PUBLIC ${RLC_INCLUDE_DIR})
-  target_link_libraries(cryptoTools ${RLC_LIBRARY})
+  target_link_libraries(cryptoTools relic)
 endif (ENABLE_RELIC)
 
 # libsodium
 ###########################################################################
 
 if (ENABLE_SODIUM)
-  target_include_directories(cryptoTools PUBLIC ${SODIUM_INCLUDE_DIRS})
-  target_link_directories(cryptoTools PUBLIC ${SODIUM_LIBRARY_DIRS})
-  target_link_libraries(cryptoTools ${SODIUM_LIBRARIES})
+  target_link_libraries(cryptoTools sodium)
 endif (ENABLE_SODIUM)
 
 ## WolfSSL
 ###########################################################################
 
 if(ENABLE_WOLFSSL)
-  target_include_directories(cryptoTools PUBLIC "${WOLFSSL_LIB_INCLUDE_DIRS}")
+  target_include_directories(cryptoTools PUBLIC 
+                    $<BUILD_INTERFACE:${WOLFSSL_LIB_INCLUDE_DIRS}>
+                    $<INSTALL_INTERFACE:>)
   target_link_libraries(cryptoTools ${WOLFSSL_LIB})
 endif(ENABLE_WOLFSSL)
 
 ## Boost
 ###########################################################################
 
+
 if(ENABLE_BOOST)
-    target_include_directories(cryptoTools PUBLIC ${Boost_INCLUDE_DIR})
+    target_include_directories(cryptoTools PUBLIC 
+                    $<BUILD_INTERFACE:${Boost_INCLUDE_DIR}>
+                    $<INSTALL_INTERFACE:>)
     target_link_libraries(cryptoTools ${Boost_LIBRARIES})
 endif()
+
+
+

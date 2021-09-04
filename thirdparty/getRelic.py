@@ -1,9 +1,10 @@
 
 import os 
+import sys 
 import platform
 
 
-def getRelic():
+def getRelic(install, prefix, par):
     
     cwd = os.getcwd()
     #thirdparty = os.path.dirname(os.path.realpath(__file__))
@@ -18,44 +19,59 @@ def getRelic():
         
     config = ""
     argStr = "-DCMAKE_BUILD_TYPE=Release"
-    #RelWithDebInfo
-
+    
     osStr = (platform.system())
     sudo = ""
     if(osStr == "Windows"):
         argStr = argStr + " -DMULTI=OPENMP"
-        argStr = argStr + " -DCMAKE_INSTALL_PREFIX:PATH=C:\libs"
-        #argStr = argStr + " -DWSIZE=32 -DARCH=X86"
         config = " --config Release "
         buildDir = buildDir + "_win"
+
+        if not install:
+            prefix = cwd + "/win"
     else:
         argStr = argStr + " -DMULTI=PTHREAD "
-        sudo = "sudo "
-        buildDir = buildDir + "_linux"
 
+        if install and "--sudo" in sys.argv:
+            sudo = "sudo "
+
+        buildDir = buildDir + "_linux"
+        
+        if not install:
+            prefix = cwd + "/unix"
+
+
+    
+    parallel = ""
+    if par != 1:
+        parallel = "--parallel " + str(par)
         
     CMakeCmd = "cmake -S . -B {0} {1}".format(buildDir, argStr)
-    BuildCmd = "cmake --build {0} {1} --parallel ".format(buildDir, config)
-
+    BuildCmd = "cmake --build {0} {1} {2} ".format(buildDir, config, parallel)
 
     InstallCmd = "{0}cmake --install {1}".format(sudo, buildDir)
-
+    if len(prefix):
+        InstallCmd += " --prefix {0} ".format(prefix)
     
-    
+    print("\n\n=========== getRelic.py ================")
+    print("mkdir "+ buildDir)
+    print(CMakeCmd)
+    print(BuildCmd)
+    print(InstallCmd)
+    print("vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n\n")
 
-    print("mkdir "+ buildDir+ "\n\n")
     if not os.path.exists(buildDir):
         os.mkdir(buildDir)
-    #os.system(mkDirCmd)
-    print(CMakeCmd + "\n\n")
+
     os.system(CMakeCmd)
-    print(BuildCmd + "\n\n")
     os.system(BuildCmd)
     
-    print ("Installing relic: {0}".format(InstallCmd))
+    if len(sudo):
+        print ("Installing relic: {0}".format(InstallCmd))
+
     os.system(InstallCmd)
 
 
 
 if __name__ == "__main__":
-    getRelic()
+    getRelic(False, "", 1)
