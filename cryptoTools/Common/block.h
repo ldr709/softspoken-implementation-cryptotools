@@ -136,6 +136,12 @@ namespace osuCrypto
             return ret;
         }
 
+        inline osuCrypto::block& operator^=(const osuCrypto::block& rhs)
+        {
+            *this = *this ^ rhs;
+            return *this;
+        }
+
 
         inline osuCrypto::block operator&(const osuCrypto::block& rhs)const
         {

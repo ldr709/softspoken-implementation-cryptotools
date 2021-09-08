@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <boost/config.hpp>
 #include "cryptoTools/Common/config.h"
 #include "block.h"
 
@@ -21,11 +22,18 @@
     #ifndef _WIN32_WINNT
         // compile for win 7 and up.
         #define _WIN32_WINNT 0x0601
-    #endif 
+    #endif
 	#pragma warning( disable : 4018) // signed unsigned comparison warning
 	#define TODO(x) __pragma(message (__FILE__ ":" STRINGIZE(__LINE__) " Warning:TODO - " #x))
 #else
 	#define TODO(x)
+#endif
+
+// Macro to inline as much as possible.
+#ifdef BOOST_FORCEINLINE
+#define TRY_FORCEINLINE BOOST_FORCEINLINE
+#else
+#define TRY_FORCEINLINE inline
 #endif
 
 // add instrinsics names that intel knows but clang doesn't…
@@ -61,11 +69,11 @@ namespace osuCrypto {
 
     static inline uint64_t mod64(uint64_t word, uint64_t p)
     {
-#ifdef __SIZEOF_INT128__ 
+#ifdef __SIZEOF_INT128__
         return (uint64_t)(((__uint128_t)word * (__uint128_t)p) >> 64);
 #elif defined(_MSC_VER) && defined(_WIN64)
         uint64_t highProduct;
-        _umul128(word, p, &highProduct); 
+        _umul128(word, p, &highProduct);
         return highProduct;
         unsigned __int64 _umul128(
             unsigned __int64 Multiplier,
@@ -73,8 +81,8 @@ namespace osuCrypto {
             unsigned __int64* HighProduct
         );
 #else
-        return word % p; 
-#endif 
+        return word % p;
+#endif
     }
 
 }

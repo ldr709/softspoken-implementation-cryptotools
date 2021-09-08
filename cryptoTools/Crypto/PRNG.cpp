@@ -26,7 +26,7 @@ namespace osuCrypto {
         s.mBufferByteCapacity = 0;
     }
 
-    void PRNG::operator=(PRNG&&s) 
+    void PRNG::operator=(PRNG&&s)
     {
         mBuffer = (std::move(s.mBuffer));
         mAes = (std::move(s.mAes));
@@ -72,11 +72,10 @@ namespace osuCrypto {
             {
                 if (lengthu8 >= 8 * sizeof(block))
                 {
-                    span<block> b((block*)destu8, lengthu8 / sizeof(block));
-                    mAes.ecbEncCounterMode(mBlockIdx, b.size(), b.data());
-                    mBlockIdx += b.size(); 
-
-                    step = b.size() * sizeof(block);
+                    u64 blocks = lengthu8 / sizeof(block);
+                    step = blocks * sizeof(block);
+                    mAes.ecbEncCounterMode(mBlockIdx, step, destu8);
+                    mBlockIdx += blocks;
 
                     destu8 += step;
                     lengthu8 -= step;
