@@ -58,6 +58,7 @@ namespace osuCrypto {
     typedef int8_t i8;
 
     constexpr u64 divCeil(u64 val, u64 d) { return (val + d - 1) / d; }
+    constexpr u64 divNearest(u64 val, u64 d) { return (val + (d/2)) / d; } // Ties go towards infinity.
     constexpr u64 roundUpTo(u64 val, u64 step) { return divCeil(val, step) * step; }
 
     u64 log2ceil(u64);
