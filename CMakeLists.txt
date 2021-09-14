@@ -14,7 +14,7 @@ if("${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_SOURCE_DIR}")
 	#          If top level cmake              #
 	############################################
 
-	if(${CMAKE_VERSION} VERSION_LESS "3.12.0") 
+	if(${CMAKE_VERSION} VERSION_LESS "3.12.0")
 		message("Please consider updating CMake to 3.12+")
 	endif()
 
@@ -28,7 +28,7 @@ if("${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_SOURCE_DIR}")
 	if(MSVC)
 		# optionally add the following to CMAKE_PREFIX_PATH
 		if(NOT DEFINED CMAKE_PREFIX_PATH AND NOT DEFINED NO_OC_DEFAULT_PREFIX)
-			set(CMAKE_PREFIX_PATH 
+			set(CMAKE_PREFIX_PATH
 				"c:/libs"
 				"${CMAKE_CURRENT_SOURCE_DIR}/.."
 				)
@@ -36,13 +36,14 @@ if("${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_SOURCE_DIR}")
 	else()
 		# Select flags.
 		set(CMAKE_C_FLAGS "-Wall -Wfatal-errors")
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_C_FLAGS}")	
-		SET(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG") 
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_C_FLAGS}")
+		SET(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 		SET(CMAKE_CXX_FLAGS_RELWITHDEBINFO " -O2 -g -ggdb")
 		SET(CMAKE_CXX_FLAGS_DEBUG  "-O0 -g -ggdb")
 	endif()
+	set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
 
-endif() 
+endif()
 
 
 
