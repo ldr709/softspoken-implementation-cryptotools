@@ -9,8 +9,11 @@
 
 #ifdef ENABLE_FULL_GSL
 #include <cryptoTools/gsl/span>
+// For gsl::copy
+#include <cryptoTools/gsl/gsl_algorithm>
 #else
 #include <cryptoTools/gsl/gls-lite.hpp>
+// gsl::copy already included in gsl-lite.
 #endif
 
 // Use boost in case C++20 isn't available.
@@ -49,7 +52,7 @@ namespace osuCrypto {
     template<typename T> using ptr = T*;
     template<typename T> using uPtr = std::unique_ptr<T>;
     template<typename T> using sPtr = std::shared_ptr<T>;
-    template<typename T> using span = gsl::span<T>;
+    using gsl::span;
 
     typedef uint64_t u64;
     typedef int64_t i64;
