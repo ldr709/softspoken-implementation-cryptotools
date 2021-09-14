@@ -122,18 +122,18 @@ namespace osuCrypto {
 
                 i32 misalignment = blockLength % step;
                 switch (misalignment) {
-			        #define SWITCH_CASE(n) \
-        	        case n: \
+                    #define SWITCH_CASE(n) \
+                    case n: \
                         ecbEncBlocks<n>(plaintext + idx, ciphertext + idx); \
-				        break;
-			        SWITCH_CASE(1)
-			        SWITCH_CASE(2)
-			        SWITCH_CASE(3)
-			        SWITCH_CASE(4)
-			        SWITCH_CASE(5)
-			        SWITCH_CASE(6)
-			        SWITCH_CASE(7)
-			        #undef SWITCH_CASE
+                        break;
+                    SWITCH_CASE(1)
+                    SWITCH_CASE(2)
+                    SWITCH_CASE(3)
+                    SWITCH_CASE(4)
+                    SWITCH_CASE(5)
+                    SWITCH_CASE(6)
+                    SWITCH_CASE(7)
+                    #undef SWITCH_CASE
                 }
             }
 
@@ -147,11 +147,20 @@ namespace osuCrypto {
 
             // Correlation robust hash function.
             template<u64 blocks>
-            inline void hashBlocks(const block* plaintext, block* ciphertext) const
+            TRY_FORCEINLINE typename std::enable_if<(blocks <= 16)>::type
+            hashBlocks(const block* plaintext, block* ciphertext) const
             {
                 block buff[blocks];
                 ecbEncBlocks<blocks>(plaintext, buff);
                 hashBlocksFinalXor<blocks>(plaintext, buff, ciphertext);
+            }
+
+            // Fall back to encryption loop rather than unrolling way too many blocks.
+            template<u64 blocks>
+            TRY_FORCEINLINE typename std::enable_if<(blocks > 16)>::type
+            hashBlocks(const block* plaintext, block* ciphertext) const
+            {
+                hashBlocks(plaintext, blocks, ciphertext);
             }
 
         private:
@@ -172,7 +181,6 @@ namespace osuCrypto {
             hashBlocksFinalXor(const block* plaintext, const block* buff, block* ciphertext) {}
 
         public:
-
             template<u64 blocks>
             inline void hashBlocks(const block (&plaintext)[blocks], block (&ciphertext)[blocks]) const
             {
@@ -203,18 +211,18 @@ namespace osuCrypto {
 
                 i32 misalignment = blockLength % step;
                 switch (misalignment) {
-			        #define SWITCH_CASE(n) \
-        	        case n: \
+                    #define SWITCH_CASE(n) \
+                    case n: \
                         hashBlocks<n>(plaintext + idx, ciphertext + idx); \
-				        break;
-			        SWITCH_CASE(1)
-			        SWITCH_CASE(2)
-			        SWITCH_CASE(3)
-			        SWITCH_CASE(4)
-			        SWITCH_CASE(5)
-			        SWITCH_CASE(6)
-			        SWITCH_CASE(7)
-			        #undef SWITCH_CASE
+                        break;
+                    SWITCH_CASE(1)
+                    SWITCH_CASE(2)
+                    SWITCH_CASE(3)
+                    SWITCH_CASE(4)
+                    SWITCH_CASE(5)
+                    SWITCH_CASE(6)
+                    SWITCH_CASE(7)
+                    #undef SWITCH_CASE
                 }
             }
 
@@ -311,7 +319,7 @@ namespace osuCrypto {
             return _mm_aesenc_si128(state, roundKey);
         }
 
-#if defined(__GNUC__) || defined(__clang__)
+#if (defined(__GNUC__) || defined(__clang__)) && defined(__OPTIMIZE__)
         // Use asm hacks to define a custom calling convention, so that the plaintext and ciphertext
         // get passed in registers. This is possible without asm hacking for the inputs, but there's
         // no way to get GCC's calling convention to put more than one output in a SSE register.
@@ -323,6 +331,10 @@ namespace osuCrypto {
         // don't know what to do with them, but they don't matter.) The inline assembly only works
         // up to 14 blocks, due to a GCC limitation:
         // https://gcc.gnu.org/legacy-ml/gcc-help/2008-03/msg00109.html
+        //
+        // Compiling without optimization causes problems for this because the compiler will emit
+        // some boilerplate code that gets in the way, so the #if above also checks to make sure
+        // that optimization is turned on.
 
         #define AES_SPECIALIZE_ENC_BLOCKS(n) \
         __attribute__((sysv_abi)) void ecbEncBlocksCustomCallingConv##n(); \

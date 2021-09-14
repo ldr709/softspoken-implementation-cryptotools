@@ -364,7 +364,7 @@ namespace osuCrypto {
 
         }
 
-#if defined(__GNUC__) || defined(__clang__)
+#if (defined(__GNUC__) || defined(__clang__)) && defined(__OPTIMIZE__)
         #define AES_ENC_BLOCKS_CUSTOM_CALLING_CONV(n) \
         __attribute__((sysv_abi)) void ecbEncBlocksCustomCallingConv##n() \
         { \
