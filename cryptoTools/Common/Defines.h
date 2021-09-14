@@ -13,6 +13,9 @@
 #include <cryptoTools/gsl/gls-lite.hpp>
 #endif
 
+// Use boost in case C++20 isn't available.
+#include <boost/core/bit.hpp>
+
 #define STRINGIZE_DETAIL(x) #x
 #define STRINGIZE(x) STRINGIZE_DETAIL(x)
 #define LOCATION __FILE__ ":" STRINGIZE(__LINE__)
@@ -23,10 +26,10 @@
         // compile for win 7 and up.
         #define _WIN32_WINNT 0x0601
     #endif
-	#pragma warning( disable : 4018) // signed unsigned comparison warning
-	#define TODO(x) __pragma(message (__FILE__ ":" STRINGIZE(__LINE__) " Warning:TODO - " #x))
+    #pragma warning( disable : 4018) // signed unsigned comparison warning
+    #define TODO(x) __pragma(message (__FILE__ ":" STRINGIZE(__LINE__) " Warning:TODO - " #x))
 #else
-	#define TODO(x)
+    #define TODO(x)
 #endif
 
 // Macro to inline as much as possible.
@@ -61,8 +64,14 @@ namespace osuCrypto {
     constexpr u64 divNearest(u64 val, u64 d) { return (val + (d/2)) / d; } // Ties go towards infinity.
     constexpr u64 roundUpTo(u64 val, u64 step) { return divCeil(val, step) * step; }
 
-    u64 log2ceil(u64);
-    u64 log2floor(u64);
+    inline u64 log2ceil(u64 x)
+    {
+        return boost::core::bit_width(x - 1);
+    }
+    inline u64 log2floor(u64 x)
+    {
+        return boost::core::bit_width(x) - 1;
+    }
 
     block sysRandomSeed();
 

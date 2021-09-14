@@ -194,9 +194,9 @@ if(ENABLE_BOOST)
 
     macro(findBoost)
         if(MSVC)
-            find_package(Boost 1.75 COMPONENTS system thread regex)
+            find_package(Boost 1.76 COMPONENTS system thread regex)
         else()
-            find_package(Boost 1.75 COMPONENTS system thread)
+            find_package(Boost 1.76 COMPONENTS system thread)
         endif()
     endmacro()
 
