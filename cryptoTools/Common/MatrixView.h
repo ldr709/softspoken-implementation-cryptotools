@@ -1,5 +1,5 @@
 #pragma once
-// This file and the associated implementation has been placed in the public domain, waiving all copyright. No restrictions are placed on its use. 
+// This file and the associated implementation has been placed in the public domain, waiving all copyright. No restrictions are placed on its use.
 #include <cryptoTools/Common/Defines.h>
 #include <array>
 #include <tuple>
@@ -15,17 +15,17 @@ namespace osuCrypto
         using iterator = gsl::details::span_iterator<gsl::span<T>, false>;
         using const_iterator = gsl::details::span_iterator<gsl::span<T>, true>;
 #else
-		typedef T* iterator;
-		typedef T const*  const_iterator;
+        typedef T* iterator;
+        typedef T const*  const_iterator;
 #endif
-		using reverse_iterator = std::reverse_iterator<iterator>;
+        using reverse_iterator = std::reverse_iterator<iterator>;
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
         typedef T value_type;
         typedef value_type* pointer;
         typedef u64 size_type;
 
-        
+
         MatrixView()
             :mStride(0)
         {
@@ -91,12 +91,12 @@ namespace osuCrypto
         u64 cols() const { return stride(); }
 
         pointer data() const { return mView.data(); };
-        pointer data(u64 rowIdx) const 
-        { 
+        pointer data(u64 rowIdx) const
+        {
 #ifndef NDEBUG
             if (rowIdx >= rows()) throw std::runtime_error(LOCATION);
 #endif
-            return mView.data() + rowIdx * stride(); 
+            return mView.data() + rowIdx * stride();
         };
 
         iterator begin() const { return mView.begin(); };
@@ -117,10 +117,10 @@ namespace osuCrypto
             return mView[rowIdx * stride() + colIdx];
         }
 
-		const T& operator()(size_type rowIdx, size_type colIdx) const
-		{
-			return mView[rowIdx * stride() + colIdx];
-		}
+        const T& operator()(size_type rowIdx, size_type colIdx) const
+        {
+            return mView[rowIdx * stride() + colIdx];
+        }
 
         const span<T> operator[](size_type rowIdx) const
         {
