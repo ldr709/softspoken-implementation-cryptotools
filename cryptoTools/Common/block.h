@@ -106,11 +106,18 @@ namespace osuCrypto
             return output;
         }
 
-        inline bool operator<(const osuCrypto::block& rhs)
+        // For integer types, this will be specialized with SSE futher down.
+        template<typename T>
+        static typename std::enable_if<
+            std::is_pod<T>::value &&
+            (sizeof(T) <= 16) &&
+            (16 % sizeof(T) == 0),
+        block>::type allSame(T val)
         {
-            auto x = as<std::uint64_t>();
-            auto y = rhs.as<std::uint64_t>();
-            return x[1] < y[1] || (x[1] == y[1] && x[0] < y[0]);
+            std::array<T, 16 / sizeof(T)> arr;
+            for (T& x: arr)
+                x = val;
+            return arr;
         }
 
         inline osuCrypto::block operator^(const osuCrypto::block& rhs) const
@@ -142,6 +149,11 @@ namespace osuCrypto
             return *this;
         }
 
+        inline block operator~() const
+        {
+            return *this ^ block(-1, -1);
+        }
+
 
         inline osuCrypto::block operator&(const osuCrypto::block& rhs)const
         {
@@ -150,6 +162,12 @@ namespace osuCrypto
 #else
             return cc_and_si128(rhs);
 #endif
+        }
+
+        inline osuCrypto::block& operator&=(const osuCrypto::block& rhs)
+        {
+            *this = *this & rhs;
+            return *this;
         }
 
 #ifdef OC_ENABLE_SSE2
@@ -191,6 +209,12 @@ namespace osuCrypto
             return ret;
         }
 
+        inline osuCrypto::block& operator|=(const osuCrypto::block& rhs)
+        {
+            *this = *this | rhs;
+            return *this;
+        }
+
 
         inline osuCrypto::block operator<<(const std::uint8_t& rhs)const
         {
@@ -199,6 +223,12 @@ namespace osuCrypto
 #else
             return cc_slli_epi64(rhs);
 #endif
+        }
+
+        inline osuCrypto::block& operator<<=(const std::uint8_t& rhs)
+        {
+            *this = *this << rhs;
+            return *this;
         }
 
 #ifdef OC_ENABLE_SSE2
@@ -224,6 +254,12 @@ namespace osuCrypto
 #endif
         }
 
+        inline osuCrypto::block& operator>>=(const std::uint8_t& rhs)
+        {
+            *this = *this >> rhs;
+            return *this;
+        }
+
 #ifdef OC_ENABLE_SSE2
         inline block mm_srli_epi64(const std::uint8_t& rhs) const
         {
@@ -246,6 +282,12 @@ namespace osuCrypto
 #else
             return cc_add_epi64(rhs);
 #endif
+        }
+
+        inline osuCrypto::block& operator+=(const osuCrypto::block& rhs)
+        {
+            *this = *this + rhs;
+            return *this;
         }
 
 #ifdef OC_ENABLE_SSE2
@@ -274,6 +316,12 @@ namespace osuCrypto
 #endif
         }
 
+        inline osuCrypto::block& operator-=(const osuCrypto::block& rhs)
+        {
+            *this = *this - rhs;
+            return *this;
+        }
+
 #ifdef OC_ENABLE_SSE2
         inline block mm_sub_epi64(const osuCrypto::block& rhs) const
         {
@@ -290,6 +338,10 @@ namespace osuCrypto
             return ret;
         }
 
+        inline block& cmov(const osuCrypto::block& rhs, bool cond);
+
+        // Same, but expects cond to be either 0x00 or 0xff.
+        inline block& cmovBytes(const osuCrypto::block& rhs, uint8_t cond);
 
         inline bool operator==(const osuCrypto::block& rhs) const
         {
@@ -312,6 +364,21 @@ namespace osuCrypto
             auto lhsa = as<std::uint64_t>();
             auto rhsa = rhs.as<std::uint64_t>();
             return lhsa[1] < rhsa[1] || (lhsa[1] == rhsa[1] && lhsa[0] < rhsa[0]);
+        }
+
+        inline bool operator>(const block& rhs) const
+        {
+            return rhs > *this;
+        }
+
+        inline bool operator<=(const block& rhs) const
+        {
+            return !(*this > rhs);
+        }
+
+        inline bool operator>=(const block& rhs) const
+        {
+            return !(*this < rhs);
         }
 
 
@@ -554,6 +621,63 @@ namespace osuCrypto
 #endif
     };
 
+#ifdef OC_ENABLE_SSE2
+    template<>
+    inline block block::allSame<uint8_t>(uint8_t val)
+    {
+        return _mm_set1_epi8(val);
+    }
+
+    template<>
+    inline block block::allSame<int8_t>(int8_t val)
+    {
+        return _mm_set1_epi8(val);
+    }
+
+    template<>
+    inline block block::allSame<uint16_t>(uint16_t val)
+    {
+        return _mm_set1_epi16(val);
+    }
+
+    template<>
+    inline block block::allSame<int16_t>(int16_t val)
+    {
+        return _mm_set1_epi16(val);
+    }
+
+    template<>
+    inline block block::allSame<uint32_t>(uint32_t val)
+    {
+        return _mm_set1_epi32(val);
+    }
+
+    template<>
+    inline block block::allSame<int32_t>(int32_t val)
+    {
+        return _mm_set1_epi32(val);
+    }
+
+    template<>
+    inline block block::allSame<uint64_t>(uint64_t val)
+    {
+        return _mm_set1_epi64x(val);
+    }
+
+    template<>
+    inline block block::allSame<int64_t>(int64_t val)
+    {
+        return _mm_set1_epi64x(val);
+    }
+#endif
+
+    // Specialize to send bool to all bits.
+    template<>
+    inline block block::allSame<bool>(bool val)
+    {
+        return block::allSame<uint64_t>(-(int64_t) val);
+    }
+
     static_assert(sizeof(block) == 16, "expected block size");
     static_assert(std::alignment_of<block>::value == 16, "expected block alignment");
     static_assert(std::is_trivial<block>::value, "expected block trivial");
@@ -567,6 +691,30 @@ namespace osuCrypto
     }
     inline block toBlock(std::uint64_t low_u64) { return toBlock(0, low_u64); }
     inline block toBlock(const std::uint8_t* data) { return toBlock(((std::uint64_t*)data)[1], ((std::uint64_t*)data)[0]); }
+
+    inline block& block::cmov(const osuCrypto::block& rhs, bool cond)
+    {
+        return *this ^= allSame(cond) & (*this ^ rhs);
+    }
+
+    inline block& block::cmovBytes(const osuCrypto::block& rhs, uint8_t cond)
+    {
+        return *this ^= allSame(cond) & (*this ^ rhs);
+    }
+
+    inline void cswap(block& x, block& y, bool cond)
+    {
+        block diff = block::allSame(cond) & (x ^ y);
+        x ^= diff;
+        y ^= diff;
+    }
+
+    inline void cswapBytes(block& x, block& y, uint8_t cond)
+    {
+        block diff = block::allSame(cond) & (x ^ y);
+        x ^= diff;
+        y ^= diff;
+    }
 
     extern const block ZeroBlock;
     extern const block OneBlock;
