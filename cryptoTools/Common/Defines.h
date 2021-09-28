@@ -75,6 +75,10 @@ namespace osuCrypto {
     {
         return boost::core::bit_width(x) - 1;
     }
+    inline int popcount(u64 x)
+    {
+        return boost::core::popcount(x);
+    }
 
     block sysRandomSeed();
 
