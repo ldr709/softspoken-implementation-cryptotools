@@ -51,6 +51,11 @@ namespace osuCrypto
             }) {}
 #endif
 
+        explicit block(uint64_t x)
+        {
+            *this = block(0, x);
+        }
+
         template<typename T,
             typename Enable = typename std::enable_if<
                 std::is_pod<T>::value &&
