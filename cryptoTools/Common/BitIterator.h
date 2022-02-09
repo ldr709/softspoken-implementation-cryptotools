@@ -27,8 +27,8 @@ namespace osuCrypto
 
         // Copy the value of the rhs to the lhs.
         inline void operator=(u8 n) {
-            if (n > 0)  *mByte |= (1 << mShift);
-            else        *mByte &= ~(1 << mShift);
+            bool b = n;
+            *mByte ^= (*mByte ^ ((b & 1) << mShift)) & (1 << mShift);
         }
 
         inline void operator^=(bool b)

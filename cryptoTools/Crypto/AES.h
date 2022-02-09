@@ -335,15 +335,21 @@ namespace osuCrypto {
         // Compiling without optimization causes problems for this because the compiler will emit
         // some boilerplate code that gets in the way, so the #if above also checks to make sure
         // that optimization is turned on.
+        //
+        // 128 is subtracted from & added to rsp to avoid clobbering the red zone. See
+        // https://stackoverflow.com/a/47402504/4071916
 
         #define AES_SPECIALIZE_ENC_BLOCKS(n) \
         __attribute__((sysv_abi)) void ecbEncBlocksCustomCallingConv##n(); \
         \
-        template<> template<> \
-        inline void AES<NI>::ecbEncBlocks<n>(const block* plaintext, block* ciphertext) const \
+        template<> template<> TRY_FORCEINLINE \
+        void AES<NI>::ecbEncBlocks<n>(const block* plaintext, block* ciphertext) const \
         { \
             register __m128i AES_ENC_BLOCKS_VARS_##n; \
-            __asm__ (AES_ENC_BLOCKS_CALL_INSN \
+            __asm__ ( \
+                  "addq $-128, %%rsp\n\t" \
+                  AES_ENC_BLOCKS_CALL_INSN \
+                  "subq $-128, %%rsp\n\t" \
                 : AES_ENC_BLOCKS_OUTS_##n \
                 : [func] AES_ENC_BLOCKS_CALL_CONSTRAINT (ecbEncBlocksCustomCallingConv##n), "D" (this) \
                 : "cc", "r10", "xmm14", "xmm15" \

@@ -655,7 +655,7 @@ namespace osuCrypto
             void operator()(T* ptr) const
             {
                 auto alignment = std::align_val_t(std::max((size_t) 32, alignof(T)));
-                operator delete(ptr, alignment);
+                operator delete[](ptr, alignment);
             }
         };
     }
