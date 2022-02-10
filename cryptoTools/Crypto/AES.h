@@ -308,6 +308,9 @@ namespace osuCrypto {
 
 #ifdef OC_ENABLE_AESNI
         template<>
+        void AES<NI>::setKey(const block& userKey);
+
+        template<>
         inline block AES<NI>::finalEnc(block state, const block& roundKey)
         {
             return _mm_aesenclast_si128(state, roundKey);
@@ -563,6 +566,7 @@ namespace osuCrypto {
 
 #ifdef OC_ENABLE_AESNI
 
+        // TODO: use technique from "Fast Garbling of Circuits Under Standard Assumptions".
         template<int SS>
         void keyGenHelper8(std::array<block,8>& key)
         {
@@ -731,6 +735,49 @@ namespace osuCrypto {
             return rhs;
         }
     };
+
+	// Pseudorandomly generate a stream of AES round keys.
+	struct AESStream
+	{
+		static constexpr size_t chunkSize = 8;
+
+		AES prng;
+		MultiKeyAES<chunkSize> aesRoundKeys;
+		size_t index;
+
+		// Uninitialized.
+		AESStream() = default;
+
+		AESStream(block seed)
+		{
+			setSeed(seed);
+		}
+
+		void setSeed(block seed)
+		{
+			index = 0;
+			prng.setKey(seed);
+			refillBuffer();
+		}
+
+		const AES& get() const
+		{
+			return aesRoundKeys.mAESs[index % chunkSize];
+		}
+
+		void next()
+		{
+			if (++index % chunkSize == 0)
+				refillBuffer();
+		}
+
+		void refillBuffer()
+		{
+			std::array<block, chunkSize> keys;
+			prng.ecbEncCounterMode(index, keys);
+			aesRoundKeys.setKeys(keys);
+		}
+	};
 
 
     //// A class to perform AES decryption.
