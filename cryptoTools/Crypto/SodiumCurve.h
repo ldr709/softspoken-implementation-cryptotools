@@ -79,6 +79,12 @@ struct Scalar25519
         *this = Scalar25519(prng);
     }
 
+    void randomize(const block& seed)
+    {
+		PRNG prng(seed);
+        this->randomize(prng);
+    }
+
     bool operator==(const Scalar25519& cmp) const;
 
     bool operator!=(const Scalar25519& cmp) const
@@ -181,6 +187,12 @@ struct Prime25519 : public Scalar25519
     void randomize(PRNG& prng)
     {
         *this = Prime25519(prng);
+    }
+
+    void randomize(const block& seed)
+    {
+		PRNG prng(seed);
+        this->randomize(prng);
     }
 };
 

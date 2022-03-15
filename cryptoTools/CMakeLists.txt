@@ -1,4 +1,4 @@
-project(cryptoTools)
+project(cryptoTools LANGUAGES C CXX ASM ASM_NASM)
 
 include(FindPkgConfig)
 
@@ -6,6 +6,13 @@ get_directory_property(hasParent PARENT_DIRECTORY)
 
 # add the source files
 file(GLOB_RECURSE SRCS *.cpp *.c)
+if (ENABLE_SSE AND UNIX)
+	list(APPEND SRCS Crypto/asm/sha_lnx.asm)
+elseif (ENABLE_SSE AND WIN32)
+	list(APPEND SRCS Crypto/asm/sha_win64.asm)
+else()
+	add_compile_definitions(NO_INTEL_ASM_SHA1)
+endif()
 add_library(cryptoTools STATIC ${SRCS})
 
 # make projects that include cryptoTools use this as an include folder
@@ -17,14 +24,14 @@ target_include_directories(cryptoTools PUBLIC
                     $<INSTALL_INTERFACE:include>)
 
 if(NOT MSVC)
-    target_compile_options(cryptoTools PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-std=c++17> -pthread)
+    target_compile_options(cryptoTools PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-std=c++17> $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-pthread>)
     target_link_options(cryptoTools PUBLIC -pthread)
 
     if(ENABLE_SSE)
-        target_compile_options(cryptoTools PUBLIC -maes -msse2 -msse3 -mssse3 -msse4.1 -mpclmul)
+        target_compile_options(cryptoTools PUBLIC $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-maes -msse2 -msse3 -mssse3 -msse4.1 -mpclmul>)
     endif()
     if(ENABLE_AVX)
-        target_compile_options(cryptoTools PUBLIC -mavx2)
+        target_compile_options(cryptoTools PUBLIC $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-mavx2>)
     endif()
 endif()
 
